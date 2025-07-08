@@ -1,0 +1,83 @@
+{
+    "nodes": [
+        {
+            "id": "AI",
+            "label": "Artificial Intelligence",
+            "color": "orange",
+            "size": 30
+        },
+        {
+            "id": "Neural Nets",
+            "label": "Neural Networks",
+            "color": "yellow",
+            "size": 20
+        },
+        {
+            "id": "NLP",
+            "label": "Natural Language Processing",
+            "color": "yellow",
+            "size": 20
+        },
+	{
+	    "id": "CS",
+	    "label": "Computer Science",
+	    "color": "red",
+            "size": 50
+        },
+	{
+	    "id": "Information Theory",
+	    "label": "Information Theory",
+	    "color": "purple",
+            "size": 30
+        },
+	{
+	    "id": "Storing Information",
+	    "label": "Storing Information",
+	    "color": "blue",
+            "size": 20
+        }
+    ],
+    "edges": [
+        {
+            "from": "AI",
+            "to": "Neural Nets"
+        },
+        {
+            "from": "AI",
+            "to": "NLP"
+        },
+        {
+            "from": "CS",
+            "to": "AI"
+        },
+	{
+            "from": "CS",
+            "to": "Information Theory"
+        },
+	{
+            "from": "Information Theory",
+            "to": "Storing Information"
+        }
+
+    ],
+    "sidebar_lookup": {
+        "AI": {
+            "title": "Artificial Intelligence",
+            "color": "red",
+            "size": 20,
+            "html_file": "node_data/ai_details.html"
+        },
+        "Neural Nets": {
+            "title": "Neural Networks",
+            "color": "orange",
+            "size": 20,
+            "html_file": "node_data/neural_nets_details.html"
+        },
+        "NLP": {
+            "title": "Natural Language Processing",
+            "color": "orange",
+            "size": 20,
+            "html_file": "node_data/nlp_details.html"
+        }
+    }
+}

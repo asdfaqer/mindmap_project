@@ -1,0 +1,244 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mindmap</title>
+    <link rel="icon" type="image/x-icon" href="/Mindmap.png">
+    <meta charset="utf-8">  <script type="text/javascript" src="https://unpkg.com/vis-network/dist/vis-network.min.js"></script>
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+      }
+
+      #mynetwork {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 70%; /* Initial width for the graph area */
+        height: 100vh;
+        transition: width 0.3s, left 0.3s;
+        z-index: 1;
+      }
+
+      #sidebar {
+        position: absolute;
+        top: 0;
+        left: 70%;
+        width: 30%;
+        height: 100vh;
+        padding: 10px;
+        box-sizing: border-box;
+        overflow-y: auto;
+        border-left: 1px solid #ccc;
+        background: #f9f9f9;
+        transition: width 0.3s, left 0.3s, padding-left 0.3s;
+        z-index: 2;
+      }
+
+      #sidebar.fullscreen {
+        left: 0;
+        width: 100%;
+        padding-left: 30px; /* Push content to the right to make space for the button */
+      }
+
+      #mynetwork.fullscreen {
+        left: -70%;
+        width: 70%;
+      }
+
+      #toggle-button {
+        position: absolute;
+        top: 0;
+        left: calc(70% - 20px);
+        width: 20px;
+        height: 100vh;
+        background: #ccc;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        writing-mode: vertical-rl;
+        text-orientation: upright;
+        font-size: 12px;
+        z-index: 3;
+        border-right: 1px solid #999;
+        transition: left 0.3s;
+      }
+
+      #toggle-button.fullscreen {
+        left: 0;
+      }
+
+      /* These styles are no longer directly used for sidebar content but kept for reference
+         if you decide to revert to direct content injection. */
+      #sidebar img {
+        width: 100%;
+        max-height: 150px;
+        object-fit: contain;
+        margin: 10px 0;
+      }
+
+      #sidebar h2 {
+        font-size: 1rem;
+        margin-top: 0;
+      }
+
+      #sidebar p {
+        font-size: 0.9rem;
+      }
+    </style>
+</head>
+<body>
+    <div id="mynetwork"></div>
+
+    <div id="toggle-button" onclick="toggleSidebar()">▶</div>
+
+    <div id="sidebar">
+      <h2>Click a node</h2>
+      <p>Details will appear here.</p>
+    </div>
+
+    <script type="text/javascript">
+      // Global variable for vis.js network instance
+      var network;
+      var nodeDataLookup = {}; // This will store the sidebar_lookup data
+
+      // Function to update sidebar content
+      function updateSidebar(nodeId) {
+        var sidebar = document.getElementById("sidebar");
+        var data = nodeDataLookup[nodeId];
+
+        if (data && data.html_file) {
+          sidebar.innerHTML = '<h2>Loading...</h2><p>Please wait.</p>';
+
+          fetch(data.html_file)
+            .then(response => {
+              if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+              }
+              return response.text();
+            })
+            .then(htmlContent => {
+              sidebar.innerHTML = htmlContent; // Inject the fetched HTML
+            })
+            .catch(error => {
+              console.error('Error loading HTML file:', error);
+              sidebar.innerHTML = `<h2>Error</h2><p>Could not load details for ${nodeId}.</p><p>${error.message}</p>`;
+            });
+        } else {
+          sidebar.innerHTML = '<h2>No details available</h2><p>Click a node with associated data.</p>';
+        }
+      }
+
+      // Function to toggle sidebar
+      function toggleSidebar() {
+        const sidebar = document.getElementById("sidebar");
+        const networkDiv = document.getElementById("mynetwork");
+        const button = document.getElementById("toggle-button");
+
+        const isFullscreen = sidebar.classList.toggle("fullscreen");
+        networkDiv.classList.toggle("fullscreen");
+        button.classList.toggle("fullscreen");
+
+        button.innerText = isFullscreen ? "◀" : "▶";
+
+        // Give CSS transition time to complete, then resize network
+        setTimeout(function() {
+            if (typeof network !== "undefined") {
+                network.resize();
+                if (!isFullscreen) {
+                    network.fit(); // Fit graph to view when exiting fullscreen
+                }
+            }
+        }, 300);
+      }
+
+      // --- NEW JAVASCRIPT FOR DYNAMIC GRAPH CREATION ---
+      document.addEventListener("DOMContentLoaded", function() {
+          var container = document.getElementById('mynetwork');
+
+          // Fetch the graph data from the JSON file
+          fetch('node_data/graph_data.json')
+              .then(response => {
+                  if (!response.ok) {
+                      throw new Error(`HTTP error! status: ${response.status}`);
+                  }
+                  return response.json();
+              })
+              .then(data => {
+                  // Store sidebar lookup data
+                  nodeDataLookup = data.sidebar_lookup;
+
+                  // Create nodes and edges DataSets for vis.js
+                  var nodes = new vis.DataSet(data.nodes);
+                  var edges = new vis.DataSet(data.edges);
+
+                  // Provide the data to the vis.Network
+                  var visData = {
+                      nodes: nodes,
+                      edges: edges
+                  };
+
+                  // Default options for the network
+                  var options = {
+                    nodes: {
+                        shape: 'dot',
+                        font: {
+                            size: 15
+                        },
+                        shadow:true
+                    },
+                    edges: {
+                        width: 2,
+                        shadow:true
+                    },
+                    physics: {
+                        enabled: true,
+                        barnesHut: {
+                            gravitationalConstant: -2000,
+                            centralGravity: 0.3,
+                            springLength: 95,
+                            springConstant: 0.04,
+                            damping: 0.09,
+                            avoidOverlap: 0
+                        },
+                        solver: 'barnesHut',
+                        stabilization: { iterations: 2500 } // Helps stabilize graph on load
+                    },
+                    interaction: {
+                        hover: true,
+                        navigationButtons: true, // Add zoom in/out, fit buttons
+                        keyboard: true // Enable keyboard navigation
+                    }
+                  };
+
+                  // Initialize the network
+                  network = new vis.Network(container, visData, options);
+
+                  // Attach click event listener to the dynamically created network
+                  network.on("click", function(params) {
+                      if (params.nodes.length > 0) {
+                          updateSidebar(params.nodes[0]);
+                      }
+                  });
+
+                  // Optional: Fit the network to view after it's loaded and stabilized
+                  network.once('stabilizationIterationsDone', function() {
+                      network.fit();
+                  });
+              })
+              .catch(error => {
+                  console.error('Error fetching graph data:', error);
+                  document.getElementById('mynetwork').innerHTML = `
+                      <div style="padding: 20px; color: red;">
+                          <h2>Error Loading Graph</h2>
+                          <p>Could not load graph data. Please ensure 'node_data/graph_data.json' exists and the server is running correctly.</p>
+                          <p>Error: ${error.message}</p>
+                      </div>
+                  `;
+              });
+      });
+    </script>
+</body>
+</html>
